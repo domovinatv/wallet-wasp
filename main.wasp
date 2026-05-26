@@ -42,6 +42,21 @@ page ReceivePage {
   component: import { ReceivePage } from "@src/pages/ReceivePage"
 }
 
+route ActivityRoute { path: "/activity", to: ActivityPage }
+page ActivityPage {
+  component: import { ActivityPage } from "@src/pages/ActivityPage"
+}
+
+route SettingsRoute { path: "/settings", to: SettingsPage }
+page SettingsPage {
+  component: import { SettingsPage } from "@src/pages/SettingsPage"
+}
+
+route ExpandAccessRoute { path: "/settings/expand-access", to: ExpandAccessPage }
+page ExpandAccessPage {
+  component: import { ExpandAccessPage } from "@src/pages/ExpandAccessPage"
+}
+
 // #region Wallet operations
 action sendEure {
   fn: import { sendEure } from "@src/relay/relay"

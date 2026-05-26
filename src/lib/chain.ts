@@ -1,27 +1,17 @@
-import { createPublicClient, http, type Address, formatUnits } from "viem";
+import { type Address, formatUnits, erc20Abi } from "viem";
 import { brand } from "../brand.config.js";
+import { publicClient } from "./safe.js";
 
-export const publicClient = createPublicClient({
-  transport: http(brand.chain.rpcUrl),
-});
+export { publicClient };
 
-const ERC20_BALANCE_OF_ABI = [
-  {
-    type: "function",
-    name: "balanceOf",
-    stateMutability: "view",
-    inputs: [{ name: "owner", type: "address" }],
-    outputs: [{ name: "balance", type: "uint256" }],
-  },
-] as const;
-
+/** Single ERC-20 balance lookup. For wallet-picker batches use balances.ts. */
 export async function getTokenBalance(safeAddr: Address): Promise<{
   raw: bigint;
   formatted: string;
 }> {
   const raw = await publicClient.readContract({
     address: brand.token.address,
-    abi: ERC20_BALANCE_OF_ABI,
+    abi: erc20Abi,
     functionName: "balanceOf",
     args: [safeAddr],
   });

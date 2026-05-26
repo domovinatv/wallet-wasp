@@ -1,9 +1,17 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { isAddress, parseUnits } from "viem";
 import { getSession } from "../lib/session.js";
 import { brand } from "../brand.config.js";
 import { sendEure } from "wasp/client/operations";
+import { parseAmount, isAmountInvalidForDisplay } from "../lib/amount.js";
+import {
+  addRecipient,
+  listRecentRecipients,
+  type Recipient,
+} from "../lib/recipients.js";
+import { humanizeError } from "../lib/errors.js";
+import { haptic } from "../lib/haptic.js";
 import { Layout } from "../ui/Layout.js";
 import { Card } from "../ui/Card.js";
 import { Button } from "../ui/Button.js";
@@ -18,43 +26,75 @@ type Status =
 export function SendPage() {
   const session = getSession();
   const navigate = useNavigate();
-  const [toAddr, setToAddr] = useState("");
-  const [amount, setAmount] = useState("");
+  const [params, setParams] = useSearchParams();
+  const [toAddr, setToAddr] = useState(params.get("to") ?? "");
+  const [amount, setAmount] = useState(params.get("amount") ?? "");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [recents, setRecents] = useState<Recipient[]>([]);
+
+  useEffect(() => {
+    setRecents(listRecentRecipients(5));
+  }, []);
+
+  // Strip deep-link query after consuming, so reload doesn't refresh values
+  useEffect(() => {
+    if (params.get("to") || params.get("amount")) {
+      setParams(new URLSearchParams(), { replace: true });
+    }
+  }, [params, setParams]);
 
   if (!session) {
     navigate("/login");
     return null;
   }
 
-  const toValid = toAddr.length === 0 || isAddress(toAddr);
   const toReady = isAddress(toAddr);
-  const amountValid = /^\d+([.,]\d+)?$/.test(amount.trim());
-  const canSubmit = toReady && amountValid && status.kind !== "sending";
+  const toInvalid = toAddr.length > 0 && !toReady;
+  const amountInvalid = isAmountInvalidForDisplay(amount);
+  const amountParse = parseAmount(amount);
+  const canSubmit =
+    toReady && amountParse.ok && status.kind !== "sending";
+
+  const filteredRecents = useMemo(
+    () =>
+      recents.filter(
+        (r) =>
+          r.address.toLowerCase() !== toAddr.toLowerCase().trim() &&
+          r.address.toLowerCase() !== session.safeAddr.toLowerCase(),
+      ),
+    [recents, toAddr, session.safeAddr],
+  );
 
   async function onSend() {
-    if (!canSubmit) return;
+    if (!canSubmit || !amountParse.ok) return;
+    haptic("tap");
     setStatus({ kind: "sending" });
     try {
-      const normalizedAmount = amount.replace(",", ".");
-      const amountWei = parseUnits(normalizedAmount, brand.token.decimals);
+      const amountWei = parseUnits(
+        amountParse.normalized,
+        brand.token.decimals,
+      );
       const result = await sendEure({
         from: session!.safeAddr,
         to: toAddr,
         amount: amountWei.toString(),
       });
+      addRecipient(toAddr);
+      setRecents(listRecentRecipients(5));
+      haptic("success");
       setStatus({ kind: "sent", txHash: result.txHash });
     } catch (e) {
+      haptic("error");
       setStatus({
         kind: "error",
-        message: e instanceof Error ? e.message : "Send failed",
+        message: humanizeError(e, "generic"),
       });
     }
   }
 
   return (
     <Layout back={{ to: "/wallet", label: "Wallet" }} title="Send">
-      <div className="pt-1">
+      <div className="space-y-4 pt-1">
         <Card>
           <div className="space-y-4">
             <Input
@@ -69,9 +109,28 @@ export function SendPage() {
               value={toAddr}
               onChange={(e) => setToAddr(e.target.value.trim())}
               mono
-              error={!toValid ? "Not a valid 0x address" : null}
-              hint={toReady ? "Looks good." : "Paste a 0x-prefixed Ethereum address."}
+              error={toInvalid ? "Not a valid 0x address" : null}
+              hint={
+                toReady ? "Looks good." : "Paste a 0x-prefixed Ethereum address."
+              }
             />
+
+            {filteredRecents.length > 0 && !toReady && (
+              <div data-testid="recipient-chips" className="flex flex-wrap gap-2">
+                {filteredRecents.map((r) => (
+                  <button
+                    key={r.address}
+                    type="button"
+                    onClick={() => setToAddr(r.address)}
+                    className="mono rounded-lg bg-ink/5 px-2 py-1 text-xs text-ink-muted transition hover:bg-ink/10"
+                  >
+                    {r.label
+                      ? `${r.label}: ${r.address.slice(0, 6)}…${r.address.slice(-4)}`
+                      : `${r.address.slice(0, 6)}…${r.address.slice(-4)}`}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <Input
               data-testid="amount-input"
@@ -82,6 +141,11 @@ export function SendPage() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="nums"
+              error={
+                amountInvalid
+                  ? "Unesi pozitivan iznos (npr. 1,50)"
+                  : null
+              }
             />
 
             <Button
@@ -102,7 +166,7 @@ export function SendPage() {
         {status.kind === "sent" && (
           <Card
             data-testid="send-success"
-            className="mt-4 bg-brand-50 ring-1 ring-brand/10"
+            className="bg-brand-50 ring-1 ring-brand/10"
           >
             <div className="flex items-start gap-3">
               <CheckCircle />
@@ -129,7 +193,7 @@ export function SendPage() {
         {status.kind === "error" && (
           <Card
             data-testid="send-error"
-            className="mt-4 bg-accent-50 ring-1 ring-accent/15"
+            className="bg-accent-50 ring-1 ring-accent/15"
           >
             <p className="text-sm font-medium text-accent">{status.message}</p>
           </Card>

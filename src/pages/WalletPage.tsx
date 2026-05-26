@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import type { Address as AddrType } from "viem";
-import { getSession, clearSession } from "../lib/session.js";
+import { getSession } from "../lib/session.js";
 import { getTokenBalance } from "../lib/chain.js";
+import { fetchActivity, formatAmount, timeAgo, type ActivityItem } from "../lib/activity.js";
 import { brand } from "../brand.config.js";
 import { Layout } from "../ui/Layout.js";
 import { Card } from "../ui/Card.js";
-import { Address } from "../ui/Address.js";
+import { Address as AddressChip } from "../ui/Address.js";
 
 type BalanceState =
   | { kind: "loading" }
@@ -23,6 +24,8 @@ export function WalletPage() {
   const session = getSession();
   const navigate = useNavigate();
   const [balance, setBalance] = useState<BalanceState>({ kind: "loading" });
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
 
   useEffect(() => {
     if (!session) {
@@ -30,6 +33,7 @@ export function WalletPage() {
       return;
     }
     let cancelled = false;
+
     void (async () => {
       try {
         const result = await getTokenBalance(session.safeAddr as AddrType);
@@ -45,8 +49,26 @@ export function WalletPage() {
         }
       }
     })();
+
+    // Delay activity fetch slightly so the wallet UI paints first.
+    // Activity does several RPC calls (logs + block timestamps) so we
+    // never want it to gate the balance card.
+    const activityTimer = setTimeout(() => {
+      void (async () => {
+        try {
+          const items = await fetchActivity(session.safeAddr as AddrType, 5);
+          if (!cancelled) setActivity(items);
+        } catch {
+          /* silent on home — activity page surfaces errors */
+        } finally {
+          if (!cancelled) setActivityLoading(false);
+        }
+      })();
+    }, 200);
+
     return () => {
       cancelled = true;
+      clearTimeout(activityTimer);
     };
   }, [session, navigate]);
 
@@ -69,16 +91,12 @@ export function WalletPage() {
               <span className="text-xs uppercase tracking-wider text-white/70">
                 Balance
               </span>
-              <button
-                data-testid="signout-button"
-                onClick={() => {
-                  clearSession();
-                  navigate("/");
-                }}
+              <Link
+                to="/settings"
                 className="rounded-md px-2 py-1 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
               >
-                Sign out
-              </button>
+                Postavke
+              </Link>
             </div>
 
             <div className="mt-3 flex items-baseline gap-2">
@@ -144,6 +162,66 @@ export function WalletPage() {
           </Link>
         </div>
 
+        {/* Activity feed (recent) */}
+        <div className="mt-4 flex items-center justify-between px-1">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-ink-soft">
+            Aktivnost
+          </h2>
+          <Link
+            to="/activity"
+            className="text-xs text-brand hover:underline"
+            data-testid="activity-cta"
+          >
+            Sve →
+          </Link>
+        </div>
+        <Card className="mt-2 p-0">
+          {activityLoading && (
+            <p className="px-5 py-4 text-sm text-ink-soft">učitavam…</p>
+          )}
+          {!activityLoading && activity.length === 0 && (
+            <p
+              data-testid="no-activity"
+              className="px-5 py-4 text-sm text-ink-soft"
+            >
+              Još nema transakcija.
+            </p>
+          )}
+          {activity.length > 0 && (
+            <ul className="divide-y divide-border">
+              {activity.map((item) => (
+                <li key={`${item.txHash}-${item.direction}`}>
+                  <a
+                    href={`${brand.chain.explorerUrl}/tx/${item.txHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between gap-3 px-5 py-3 transition hover:bg-ink/[0.02]"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        {item.direction === "in" ? <ArrowDown /> : <ArrowUp />}
+                        <span>{item.direction === "in" ? "Primljeno" : "Poslano"}</span>
+                      </div>
+                      <div className="mt-0.5 text-xs text-ink-soft">
+                        {timeAgo(item.timestamp)}
+                      </div>
+                    </div>
+                    <div
+                      className={`nums shrink-0 text-sm font-semibold ${item.direction === "in" ? "text-emerald-700" : "text-ink"}`}
+                    >
+                      {item.direction === "in" ? "+" : "−"}
+                      {formatAmount(item.amount)}{" "}
+                      <span className="text-xs font-medium text-ink-soft">
+                        {brand.token.symbol}
+                      </span>
+                    </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
         {/* Safe address strip */}
         <Card className="mt-4">
           <div className="flex items-center justify-between gap-3">
@@ -158,7 +236,7 @@ export function WalletPage() {
                 {session.safeAddr}
               </code>
             </div>
-            <Address value={session.safeAddr} truncate />
+            <AddressChip value={session.safeAddr} truncate />
           </div>
           <a
             href={`${brand.chain.explorerUrl}/address/${session.safeAddr}`}
@@ -199,6 +277,22 @@ function ArrowDownLeft() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function ArrowDown() {
+  return (
+    <svg viewBox="0 0 12 12" className="h-3 w-3 text-emerald-700" fill="none">
+      <path d="M6 2v8m0 0l3-3m-3 3l-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ArrowUp() {
+  return (
+    <svg viewBox="0 0 12 12" className="h-3 w-3 text-ink-muted" fill="none">
+      <path d="M6 10V2m0 0L3 5m3-3l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }

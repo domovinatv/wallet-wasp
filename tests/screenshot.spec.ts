@@ -45,6 +45,19 @@ test("capture screenshots of each route", async ({ page }) => {
   await page.waitForTimeout(300); // QR regen
   await page.screenshot({ path: "screenshots/receive.png", fullPage: true });
 
+  // Activity
+  await page.goto("/activity");
+  await page.waitForTimeout(1500); // activity fetch
+  await page.screenshot({ path: "screenshots/activity.png", fullPage: true });
+
+  // Settings
+  await page.goto("/settings");
+  await page.screenshot({ path: "screenshots/settings.png", fullPage: true });
+
+  // Expand access
+  await page.goto("/settings/expand-access");
+  await page.screenshot({ path: "screenshots/expand-access.png", fullPage: true });
+
   // Login (logged out flow)
   await page.evaluate(() => localStorage.clear());
   await page.goto("/login");
