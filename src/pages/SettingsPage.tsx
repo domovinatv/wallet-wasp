@@ -1,11 +1,18 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getSession, clearSession } from "../lib/session.js";
 import { useTheme, type ThemeMode } from "../lib/theme.js";
+import {
+  getActivePasskey,
+  listKnownPasskeys,
+  type PasskeyRecord,
+} from "../lib/passkey-client.js";
 import { brand } from "../brand.config.js";
 import { Layout } from "../ui/Layout.js";
 import { Card } from "../ui/Card.js";
 import { Button } from "../ui/Button.js";
 import { Address as AddressChip } from "../ui/Address.js";
+import { WalletSwitcherSheet } from "../ui/WalletSwitcherSheet.js";
 
 const ADR_URL = brand.parentRepoUrl + brand.adrPath;
 
@@ -13,6 +20,14 @@ export function SettingsPage() {
   const session = getSession();
   const navigate = useNavigate();
   const { mode, setMode } = useTheme();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [active, setActive] = useState<PasskeyRecord | null>(null);
+  const [knownCount, setKnownCount] = useState(0);
+
+  useEffect(() => {
+    setActive(getActivePasskey());
+    setKnownCount(listKnownPasskeys().length);
+  }, []);
 
   if (!session) {
     navigate("/login");
@@ -24,6 +39,11 @@ export function SettingsPage() {
       <div className="space-y-4 pt-1">
         <Section title="Račun">
           <Card>
+            {active && (
+              <Row label="Passkey">
+                <span className="text-sm">{active.keychainName}</span>
+              </Row>
+            )}
             <Row label="Safe address">
               <AddressChip value={session.safeAddr} />
             </Row>
@@ -40,6 +60,26 @@ export function SettingsPage() {
                 {session.userId.slice(0, 8)}…
               </code>
             </Row>
+            {knownCount > 1 && (
+              <>
+                <hr className="my-2 border-border" />
+                <Action
+                  onClick={() => setSwitcherOpen(true)}
+                  label={`Switch wallet (${knownCount})`}
+                  hint="Prebaci se na drugi spremljeni wallet"
+                />
+              </>
+            )}
+            {knownCount === 1 && (
+              <>
+                <hr className="my-2 border-border" />
+                <Action
+                  onClick={() => setSwitcherOpen(true)}
+                  label="Stvori još jedan wallet"
+                  hint="Dodaj drugi wallet (zaseban Safe + passkey)"
+                />
+              </>
+            )}
           </Card>
         </Section>
 
@@ -117,6 +157,11 @@ export function SettingsPage() {
           Odjavi se
         </Button>
       </div>
+      <WalletSwitcherSheet
+        open={switcherOpen}
+        onClose={() => setSwitcherOpen(false)}
+        activeCredentialId={active?.credentialId ?? null}
+      />
     </Layout>
   );
 }

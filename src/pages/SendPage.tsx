@@ -18,7 +18,10 @@ import {
   predictSignerAddress,
   type P256PublicKey,
 } from "../lib/safe.js";
-import { signWithPasskey } from "../lib/passkey-client.js";
+import {
+  getActivePasskey,
+  signWithPasskey,
+} from "../lib/passkey-client.js";
 import { Layout } from "../ui/Layout.js";
 import { Card } from "../ui/Card.js";
 import { Button } from "../ui/Button.js";
@@ -108,9 +111,15 @@ export function SendPage() {
       });
 
       setStatus({ kind: "signing" });
-      // Convert safeTxHash bytes to challenge for passkey assertion
+      // Convert safeTxHash bytes to challenge for passkey assertion.
+      // Pass the active passkey's credentialId so the OS routes the
+      // prompt to the right key (in multi-wallet setups).
       const challengeBytes = hexToBytes(safeTxHash);
-      const sigResult = await signWithPasskey(challengeBytes);
+      const active = getActivePasskey();
+      const sigResult = await signWithPasskey(
+        challengeBytes,
+        active?.credentialId,
+      );
 
       // For the relay we need signerAddress + pubkey (x, y). Production
       // tracks these in localStorage per-passkey. We don't yet — so
@@ -297,18 +306,25 @@ function CheckCircle() {
   );
 }
 
-// Reads cached signer/pubkey from localStorage session. Populated on
-// register/login success (passkeyRegisterFinish / passkeyAuthFinish
-// now return these). Old sessions without the fields get an explanatory
-// error from the relay action.
+// Reads signer + pubkey from the multi-wallet passkey registry. Active
+// PasskeyRecord is the authoritative source — falls back to session for
+// older clients pre-multi-wallet refactor.
 async function deriveWalletDetails(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _safeAddress: Address,
 ): Promise<WalletDetails> {
+  const active = getActivePasskey();
+  if (active) {
+    return {
+      signerAddress: active.signerAddress,
+      pubKeyX: active.pubKeyX,
+      pubKeyY: active.pubKeyY,
+    };
+  }
   const session = getSession();
   if (!session?.signerAddr || !session.pubKeyX || !session.pubKeyY) {
     throw new Error(
-      "Sesija nema cached signer/pubkey. Odjavi se i prijavi se ponovno.",
+      "Nema cached signer/pubkey. Prijavi se ponovno da repopuliraš multi-wallet registry.",
     );
   }
   return {

@@ -3,6 +3,10 @@ import { Link, useNavigate } from "react-router";
 import { startRegistration } from "@simplewebauthn/browser";
 import { passkeyRegisterStart, passkeyRegisterFinish } from "wasp/client/operations";
 import { setSession } from "../lib/session.js";
+import {
+  savePasskey,
+  suggestPasskeyName,
+} from "../lib/passkey-client.js";
 import { brand } from "../brand.config.js";
 import { Layout } from "../ui/Layout.js";
 import { Card } from "../ui/Card.js";
@@ -32,6 +36,22 @@ export function RegisterPage() {
         signerAddr: result.signerAddr,
         pubKeyX: result.pubKeyX,
         pubKeyY: result.pubKeyY,
+      });
+      // Multi-wallet registry: persist a PasskeyRecord so the user can
+      // switch between this and other wallets on this device, see
+      // balances per-wallet, etc. Active is set automatically.
+      savePasskey({
+        credentialId: credential.id,
+        pubKeyX: result.pubKeyX,
+        pubKeyY: result.pubKeyY,
+        signerAddress: result.signerAddr,
+        safeAddress: result.safeAddr,
+        keychainName: suggestPasskeyName(),
+        rpId:
+          typeof window !== "undefined"
+            ? window.location.hostname
+            : "localhost",
+        createdAt: new Date().toISOString(),
       });
       setStatus({
         kind: "done",

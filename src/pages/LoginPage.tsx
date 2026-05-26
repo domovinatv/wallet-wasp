@@ -3,6 +3,12 @@ import { Link, useNavigate } from "react-router";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { passkeyAuthStart, passkeyAuthFinish } from "wasp/client/operations";
 import { setSession } from "../lib/session.js";
+import {
+  lookupPasskey,
+  savePasskey,
+  setActivePasskey,
+  suggestPasskeyName,
+} from "../lib/passkey-client.js";
 import { Layout } from "../ui/Layout.js";
 import { Card } from "../ui/Card.js";
 import { Button } from "../ui/Button.js";
@@ -32,6 +38,27 @@ export function LoginPage() {
         pubKeyX: result.pubKeyX,
         pubKeyY: result.pubKeyY,
       });
+      // Sync to local multi-wallet registry: if this credentialId is
+      // already known, just mark it active; otherwise create a record
+      // (cross-device recovery: user signed in here for the first time).
+      const existing = lookupPasskey(credential.id);
+      if (existing) {
+        setActivePasskey(credential.id);
+      } else {
+        savePasskey({
+          credentialId: credential.id,
+          pubKeyX: result.pubKeyX,
+          pubKeyY: result.pubKeyY,
+          signerAddress: result.signerAddr,
+          safeAddress: result.safeAddr,
+          keychainName: suggestPasskeyName(),
+          rpId:
+            typeof window !== "undefined"
+              ? window.location.hostname
+              : "localhost",
+          createdAt: new Date().toISOString(),
+        });
+      }
       setStatus({
         kind: "done",
         userId: result.userId,
