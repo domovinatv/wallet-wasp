@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { startRegistration } from "@simplewebauthn/browser";
 import { passkeyRegisterStart, passkeyRegisterFinish } from "wasp/client/operations";
+import { setSession } from "../lib/session.js";
 
 type Status =
   | { kind: "idle" }
@@ -11,6 +12,7 @@ type Status =
 
 export function RegisterPage() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const navigate = useNavigate();
 
   async function onRegister() {
     setStatus({ kind: "creating" });
@@ -19,11 +21,13 @@ export function RegisterPage() {
       // @ts-expect-error  options is structurally compatible with PublicKeyCredentialCreationOptionsJSON
       const credential = await startRegistration({ optionsJSON: options });
       const result = await passkeyRegisterFinish({ credential });
+      setSession({ userId: result.userId, safeAddr: result.safeAddr });
       setStatus({
         kind: "done",
         userId: result.userId,
         safeAddr: result.safeAddr,
       });
+      setTimeout(() => navigate("/wallet"), 600);
     } catch (e: unknown) {
       const message =
         e instanceof Error ? e.message : "Unknown error during registration";

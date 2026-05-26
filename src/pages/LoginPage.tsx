@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { passkeyAuthStart, passkeyAuthFinish } from "wasp/client/operations";
+import { setSession } from "../lib/session.js";
 
 type Status =
   | { kind: "idle" }
@@ -11,6 +12,7 @@ type Status =
 
 export function LoginPage() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const navigate = useNavigate();
 
   async function onLogin() {
     setStatus({ kind: "authenticating" });
@@ -19,11 +21,13 @@ export function LoginPage() {
       // @ts-expect-error  options structurally compatible with PublicKeyCredentialRequestOptionsJSON
       const credential = await startAuthentication({ optionsJSON: options });
       const result = await passkeyAuthFinish({ credential });
+      setSession({ userId: result.userId, safeAddr: result.safeAddr });
       setStatus({
         kind: "done",
         userId: result.userId,
         safeAddr: result.safeAddr,
       });
+      setTimeout(() => navigate("/wallet"), 600);
     } catch (e: unknown) {
       const message =
         e instanceof Error ? e.message : "Unknown authentication error";

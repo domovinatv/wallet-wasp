@@ -27,6 +27,27 @@ page LoginPage {
   component: import { LoginPage } from "@src/pages/LoginPage"
 }
 
+route WalletRoute { path: "/wallet", to: WalletPage }
+page WalletPage {
+  component: import { WalletPage } from "@src/pages/WalletPage"
+}
+
+route SendRoute { path: "/send", to: SendPage }
+page SendPage {
+  component: import { SendPage } from "@src/pages/SendPage"
+}
+
+route ReceiveRoute { path: "/receive", to: ReceivePage }
+page ReceivePage {
+  component: import { ReceivePage } from "@src/pages/ReceivePage"
+}
+
+// #region Wallet operations
+action sendEure {
+  fn: import { sendEure } from "@src/relay/relay"
+}
+// #endregion Wallet operations
+
 // #region Passkey auth actions
 action passkeyRegisterStart {
   fn: import { passkeyRegisterStart } from "@src/auth/passkey",
