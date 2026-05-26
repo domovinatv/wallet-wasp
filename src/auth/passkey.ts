@@ -8,7 +8,7 @@ import {
 } from "@simplewebauthn/server";
 
 import { RP_ID, RP_NAME, RP_ORIGIN } from "./rp.js";
-import { deriveStubSafeAddress } from "./safeAddress.js";
+import { deriveSafeAddressFromCose } from "./safeAddress.js";
 import { signSession } from "./session.js";
 
 import type {
@@ -150,7 +150,10 @@ export const passkeyRegisterFinish: PasskeyRegisterFinish<
   );
   await consumeChallenge(context as never, clientData.challenge, "register");
 
-  const safeAddr = deriveStubSafeAddress(pubkeyBytes);
+  // Real Safe v1.4.1 CREATE2 derivation: COSE pubkey → factory.getSigner →
+  // Safe predicted address. Two RPC calls to Gnosis Chain.
+  const { safeAddress } = await deriveSafeAddressFromCose(pubkeyBytes);
+  const safeAddr: string = safeAddress;
   const pubkeyB64 = Buffer.from(pubkeyBytes).toString("base64url");
 
   const user = await context.entities.User.create({

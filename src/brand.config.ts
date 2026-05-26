@@ -29,6 +29,21 @@ export const brand = {
     rpcUrl: "https://rpc.gnosischain.com",
     explorerUrl: "https://gnosisscan.io",
     nativeCurrency: { symbol: "xDAI", decimals: 18 },
+    multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11" as `0x${string}`,
+  } as const,
+
+  // Safe v1.4.1 + WebAuthn passkey-signer infrastructure. Chain-specific
+  // contracts (these addresses are for Gnosis Chain; same Safe versions
+  // are deployed at deterministic addresses on most EVM chains).
+  contracts: {
+    safeWebAuthnSignerFactory:
+      "0x1d31F259eE307358a26dFb23EB365939E8641195" as `0x${string}`,
+    safeWebAuthnSharedSigner:
+      "0x94a4F6affBd8975951142c3999aEAB7ecee555c2" as `0x${string}`,
+    daimoP256Verifier:
+      "0xc2b78104907F722DABAc4C69f826a522B2754De4" as `0x${string}`,
+    p256Precompile:
+      "0x0000000000000000000000000000000000000100" as `0x${string}`,
   } as const,
 
   // Token to bias the UI around (the user's primary "balance")

@@ -36,7 +36,7 @@ test("full MVP flow: register → wallet → send → receive", async ({ page })
 
   await expect(page.getByTestId("safe-addr-full")).toBeVisible();
   const safeAddr = await page.getByTestId("safe-addr-full").textContent();
-  expect(safeAddr).toMatch(/^0x[0-9a-f]{40}$/);
+  expect(safeAddr).toMatch(/^0x[0-9a-fA-F]{40}$/);
 
   // --- 3. Send page ---
   await page.getByTestId("send-cta").click();

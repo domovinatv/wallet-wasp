@@ -50,7 +50,7 @@ test("passkey register creates User + Passkey + returns Safe addr", async ({
   const safeAddr = await page.getByTestId("safe-addr").textContent();
 
   expect(userId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-  expect(safeAddr).toMatch(/^0x[0-9a-f]{40}$/);
+  expect(safeAddr).toMatch(/^0x[0-9a-fA-F]{40}$/);
 });
 
 test("passkey register then login uses the same Safe address", async ({
@@ -68,7 +68,7 @@ test("passkey register then login uses the same Safe address", async ({
   const registeredSafeAddr = await page
     .getByTestId("safe-addr")
     .textContent();
-  expect(registeredSafeAddr).toMatch(/^0x[0-9a-f]{40}$/);
+  expect(registeredSafeAddr).toMatch(/^0x[0-9a-fA-F]{40}$/);
 
   // 2. Now navigate to /login and sign in with same passkey
   await page.goto("/login");
