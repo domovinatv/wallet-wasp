@@ -8,6 +8,10 @@ const KEY = "wallet-wasp:session";
 export interface ClientSession {
   userId: string;
   safeAddr: string;
+  /** Optional — signer + pubkey are needed for real Send broadcast. */
+  signerAddr?: string;
+  pubKeyX?: string;
+  pubKeyY?: string;
 }
 
 export function setSession(s: ClientSession) {

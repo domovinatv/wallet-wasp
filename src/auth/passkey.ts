@@ -37,6 +37,9 @@ type StartResult = {
 type FinishResult = {
   userId: string;
   safeAddr: string;
+  signerAddr: string;
+  pubKeyX: string;
+  pubKeyY: string;
   sessionToken: string;
 };
 
@@ -152,7 +155,11 @@ export const passkeyRegisterFinish: PasskeyRegisterFinish<
 
   // Real Safe v1.4.1 CREATE2 derivation: COSE pubkey → factory.getSigner →
   // Safe predicted address. Two RPC calls to Gnosis Chain.
-  const { safeAddress } = await deriveSafeAddressFromCose(pubkeyBytes);
+  const {
+    safeAddress,
+    signerAddress,
+    pubKey,
+  } = await deriveSafeAddressFromCose(pubkeyBytes);
   const safeAddr: string = safeAddress;
   const pubkeyB64 = Buffer.from(pubkeyBytes).toString("base64url");
 
@@ -173,6 +180,9 @@ export const passkeyRegisterFinish: PasskeyRegisterFinish<
   return {
     userId: user.id,
     safeAddr,
+    signerAddr: signerAddress,
+    pubKeyX: pubKey.x.toString(),
+    pubKeyY: pubKey.y.toString(),
     sessionToken: signSession({ userId: user.id }),
   };
 };
@@ -237,9 +247,18 @@ export const passkeyAuthFinish: PasskeyAuthFinish<
     data: { signCount: verification.authenticationInfo.newCounter },
   });
 
+  // Re-derive signerAddress + recover pubkey x/y from stored pubkey blob
+  // (COSE-encoded base64url). This is needed for relay broadcast to know
+  // which signer proxy to deploy if Safe is counterfactual.
+  const pubkeyBytes = new Uint8Array(Buffer.from(passkey.pubkey, "base64url"));
+  const { signerAddress, pubKey } = await deriveSafeAddressFromCose(pubkeyBytes);
+
   return {
     userId: passkey.userId,
     safeAddr: passkey.safeAddr,
+    signerAddr: signerAddress,
+    pubKeyX: pubKey.x.toString(),
+    pubKeyY: pubKey.y.toString(),
     sessionToken: signSession({ userId: passkey.userId }),
   };
 };

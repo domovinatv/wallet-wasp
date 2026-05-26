@@ -25,7 +25,13 @@ export function LoginPage() {
       // @ts-expect-error options structurally compatible
       const credential = await startAuthentication({ optionsJSON: options });
       const result = await passkeyAuthFinish({ credential });
-      setSession({ userId: result.userId, safeAddr: result.safeAddr });
+      setSession({
+        userId: result.userId,
+        safeAddr: result.safeAddr,
+        signerAddr: result.signerAddr,
+        pubKeyX: result.pubKeyX,
+        pubKeyY: result.pubKeyY,
+      });
       setStatus({
         kind: "done",
         userId: result.userId,

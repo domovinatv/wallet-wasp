@@ -107,7 +107,7 @@ export function encodeSafeContractSignature(
   signerAddress: Address,
   contractSignature: Hex,
 ): Hex {
-  const signerSlot = padHex(signerAddress, { size: 32 });
+  const signerSlot = padHex(signerAddress as Hex, { size: 32 });
   const dynamicOffset = padHex(toHex(65), { size: 32 });
   const sigTypeMarker: Hex = "0x00";
   const staticSlot = concatHex([signerSlot, dynamicOffset, sigTypeMarker]);

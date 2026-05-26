@@ -26,7 +26,13 @@ export function RegisterPage() {
       // @ts-expect-error options structurally compatible
       const credential = await startRegistration({ optionsJSON: options });
       const result = await passkeyRegisterFinish({ credential });
-      setSession({ userId: result.userId, safeAddr: result.safeAddr });
+      setSession({
+        userId: result.userId,
+        safeAddr: result.safeAddr,
+        signerAddr: result.signerAddr,
+        pubKeyX: result.pubKeyX,
+        pubKeyY: result.pubKeyY,
+      });
       setStatus({
         kind: "done",
         userId: result.userId,

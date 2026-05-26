@@ -81,6 +81,10 @@ page EmbedPage {
 action sendEure {
   fn: import { sendEure } from "@src/relay/relay"
 }
+
+query getRelayStatus {
+  fn: import { getRelayStatus } from "@src/relay/relay"
+}
 // #endregion Wallet operations
 
 // #region Passkey auth actions
