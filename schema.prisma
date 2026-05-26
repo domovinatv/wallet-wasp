@@ -26,8 +26,20 @@ model Passkey {
   credentialId String   @unique
   pubkey       String
   safeAddr     String
+  signCount    Int      @default(0)
   createdAt    DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id])
   userId String
+}
+
+// Short-lived WebAuthn challenges issued by passkeyRegisterStart /
+// passkeyAuthStart and consumed (deleted) by their *Finish counterparts.
+// Cleared after 5 minutes if unused.
+model WebAuthnChallenge {
+  id        String   @id @default(uuid())
+  challenge String   @unique
+  purpose   String   // "register" | "auth"
+  createdAt DateTime @default(now())
+  expiresAt DateTime
 }

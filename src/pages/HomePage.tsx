@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 export function HomePage() {
   return (
     <div
@@ -25,8 +27,8 @@ export function HomePage() {
       </p>
 
       <p style={{ margin: "0 0 12px" }}>
-        Faza 0.5 (clean scaffold) shipped. Faza 1 (passkey auth) starts next.
-        Strategic North Star + rename criteria documented in{" "}
+        Faza 1 (passkey auth) is wired. Faza 2 (wallet UI) next. Strategic
+        North Star + rename criteria documented in{" "}
         <a
           href="https://github.com/domovinatv/pay.domovina.ai/blob/main/docs/decisions/0010-open-wallet-vision.md"
           target="_blank"
@@ -37,7 +39,45 @@ export function HomePage() {
         .
       </p>
 
-      <p style={{ margin: "0 0 12px" }}>
+      <div
+        data-testid="nav-cta"
+        style={{
+          marginTop: 32,
+          display: "flex",
+          gap: 12,
+        }}
+      >
+        <Link
+          data-testid="cta-register"
+          to="/register"
+          style={{
+            padding: "10px 16px",
+            borderRadius: 8,
+            background: "#1f1f1f",
+            color: "white",
+            textDecoration: "none",
+            fontSize: 14,
+          }}
+        >
+          Create wallet
+        </Link>
+        <Link
+          data-testid="cta-login"
+          to="/login"
+          style={{
+            padding: "10px 16px",
+            borderRadius: 8,
+            border: "1px solid #1f1f1f",
+            color: "#1f1f1f",
+            textDecoration: "none",
+            fontSize: 14,
+          }}
+        >
+          Sign in
+        </Link>
+      </div>
+
+      <p style={{ marginTop: 32, fontSize: 14, color: "#666" }}>
         Powered by{" "}
         <a href="https://domovina.ai" target="_blank" rel="noreferrer noopener">
           domovina.ai

@@ -16,3 +16,35 @@ route HomeRoute { path: "/", to: HomePage }
 page HomePage {
   component: import { HomePage } from "@src/pages/HomePage"
 }
+
+route RegisterRoute { path: "/register", to: RegisterPage }
+page RegisterPage {
+  component: import { RegisterPage } from "@src/pages/RegisterPage"
+}
+
+route LoginRoute { path: "/login", to: LoginPage }
+page LoginPage {
+  component: import { LoginPage } from "@src/pages/LoginPage"
+}
+
+// #region Passkey auth actions
+action passkeyRegisterStart {
+  fn: import { passkeyRegisterStart } from "@src/auth/passkey",
+  entities: [WebAuthnChallenge]
+}
+
+action passkeyRegisterFinish {
+  fn: import { passkeyRegisterFinish } from "@src/auth/passkey",
+  entities: [User, Passkey, WebAuthnChallenge]
+}
+
+action passkeyAuthStart {
+  fn: import { passkeyAuthStart } from "@src/auth/passkey",
+  entities: [WebAuthnChallenge]
+}
+
+action passkeyAuthFinish {
+  fn: import { passkeyAuthFinish } from "@src/auth/passkey",
+  entities: [User, Passkey, WebAuthnChallenge]
+}
+// #endregion Passkey auth actions
