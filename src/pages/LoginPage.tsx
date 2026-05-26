@@ -3,6 +3,10 @@ import { Link, useNavigate } from "react-router";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { passkeyAuthStart, passkeyAuthFinish } from "wasp/client/operations";
 import { setSession } from "../lib/session.js";
+import { Layout } from "../ui/Layout.js";
+import { Card } from "../ui/Card.js";
+import { Button } from "../ui/Button.js";
+import { Address } from "../ui/Address.js";
 
 type Status =
   | { kind: "idle" }
@@ -18,7 +22,7 @@ export function LoginPage() {
     setStatus({ kind: "authenticating" });
     try {
       const { options } = await passkeyAuthStart({});
-      // @ts-expect-error  options structurally compatible with PublicKeyCredentialRequestOptionsJSON
+      // @ts-expect-error options structurally compatible
       const credential = await startAuthentication({ optionsJSON: options });
       const result = await passkeyAuthFinish({ credential });
       setSession({ userId: result.userId, safeAddr: result.safeAddr });
@@ -27,74 +31,74 @@ export function LoginPage() {
         userId: result.userId,
         safeAddr: result.safeAddr,
       });
-      setTimeout(() => navigate("/wallet"), 600);
-    } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "Unknown authentication error";
-      setStatus({ kind: "error", message });
+      setTimeout(() => navigate("/wallet"), 700);
+    } catch (e) {
+      setStatus({
+        kind: "error",
+        message: e instanceof Error ? e.message : "Unknown error",
+      });
     }
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 480,
-        margin: "0 auto",
-        padding: "48px 24px",
-        lineHeight: 1.55,
-      }}
-    >
-      <h1 style={{ fontSize: 24, margin: "0 0 16px" }}>Sign in</h1>
-      <p style={{ margin: "0 0 24px", color: "#555" }}>
-        Use your passkey to unlock your wallet on this device.
-      </p>
+    <Layout back={{ to: "/", label: "Back" }}>
+      <div className="pt-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <p className="mt-2 text-base text-ink-muted">
+          Use your passkey to unlock your wallet on this device.
+        </p>
 
-      <button
-        data-testid="login-button"
-        onClick={onLogin}
-        disabled={status.kind === "authenticating"}
-        style={{
-          padding: "12px 20px",
-          fontSize: 16,
-          borderRadius: 8,
-          background: "#1f1f1f",
-          color: "white",
-          border: "none",
-          cursor: status.kind === "authenticating" ? "wait" : "pointer",
-        }}
-      >
-        {status.kind === "authenticating" ? "Signing in..." : "Sign in"}
-      </button>
-
-      {status.kind === "done" && (
-        <div
-          data-testid="login-result"
-          style={{ marginTop: 24, padding: 16, background: "#e8f5e9", borderRadius: 8 }}
-        >
-          <p style={{ margin: "0 0 8px" }}>
-            <strong>Signed in.</strong>
-          </p>
-          <p style={{ margin: "0 0 4px", fontSize: 13 }}>
-            User ID: <code data-testid="user-id">{status.userId}</code>
-          </p>
-          <p style={{ margin: "0 0 4px", fontSize: 13 }}>
-            Safe address: <code data-testid="safe-addr">{status.safeAddr}</code>
-          </p>
+        <div className="mt-6">
+          <Button
+            data-testid="login-button"
+            onClick={onLogin}
+            loading={status.kind === "authenticating"}
+            disabled={status.kind === "done"}
+            size="lg"
+            fullWidth
+          >
+            {status.kind === "authenticating"
+              ? "Signing in…"
+              : status.kind === "done"
+                ? "Signed in"
+                : "Sign in with passkey"}
+          </Button>
         </div>
-      )}
 
-      {status.kind === "error" && (
-        <div
-          data-testid="login-error"
-          style={{ marginTop: 24, padding: 16, background: "#ffebee", borderRadius: 8 }}
-        >
-          <strong>Error:</strong> {status.message}
-        </div>
-      )}
+        {status.kind === "done" && (
+          <Card
+            data-testid="login-result"
+            className="mt-5 bg-brand-50 ring-1 ring-brand/10"
+          >
+            <p className="text-sm font-semibold text-brand">
+              Welcome back — opening your wallet…
+            </p>
+            <div className="mt-1">
+              <Address value={status.safeAddr} />
+            </div>
+            <p className="mt-2 text-[11px] text-ink-soft" style={{ display: "none" }}>
+              <span data-testid="user-id">{status.userId}</span>
+              <span data-testid="safe-addr">{status.safeAddr}</span>
+            </p>
+          </Card>
+        )}
 
-      <p style={{ marginTop: 32, fontSize: 14 }}>
-        No wallet yet? <Link to="/register">Create one</Link>
-      </p>
-    </div>
+        {status.kind === "error" && (
+          <Card
+            data-testid="login-error"
+            className="mt-5 bg-accent-50 ring-1 ring-accent/15"
+          >
+            <p className="text-sm font-medium text-accent">{status.message}</p>
+          </Card>
+        )}
+
+        <p className="mt-8 text-sm text-ink-muted">
+          No wallet yet?{" "}
+          <Link to="/register" className="link-inline font-medium text-brand">
+            Create one
+          </Link>
+        </p>
+      </div>
+    </Layout>
   );
 }

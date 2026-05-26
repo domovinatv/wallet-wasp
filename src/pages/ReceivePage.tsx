@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import QRCode from "qrcode";
 import { parseUnits } from "viem";
 import { getSession } from "../lib/session.js";
 import { brand } from "../brand.config.js";
+import { Layout } from "../ui/Layout.js";
+import { Card } from "../ui/Card.js";
+import { Input } from "../ui/Input.js";
+import { Address } from "../ui/Address.js";
 
-// EIP-681 payment URI for ERC-20 transfer
-// `ethereum:<token>@<chainId>/transfer?address=<safe>&uint256=<amountWei>`
-// Wallets that understand EIP-681 (Trust, Rainbow, MetaMask mobile, Status,
-// etc.) will pre-fill recipient + amount on scan.
 function buildEip681(safeAddr: string, amountStr: string): string {
   const base = `${brand.payment.eip681Scheme}:${brand.token.address}@${brand.chain.id}/transfer?address=${safeAddr}`;
   const trimmed = amountStr.trim().replace(",", ".");
@@ -46,54 +46,54 @@ export function ReceivePage() {
   if (!session) return null;
 
   return (
-    <div className="mx-auto max-w-md p-6">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          to="/wallet"
-          className="text-sm text-neutral-500 hover:text-neutral-800"
-        >
-          ← Wallet
-        </Link>
-        <h1 className="text-2xl font-semibold">Receive {brand.token.symbol}</h1>
-      </div>
+    <Layout back={{ to: "/wallet", label: "Wallet" }} title="Receive">
+      <div className="pt-1 space-y-4">
+        <Card>
+          <div className="flex flex-col items-center">
+            <div className="rounded-2xl bg-white p-3 ring-1 ring-border">
+              <canvas
+                data-testid="receive-qr"
+                ref={canvasRef}
+                className="block"
+              />
+            </div>
+            <div className="mt-4 flex flex-col items-center gap-1">
+              <span className="text-xs uppercase tracking-wider text-ink-soft">
+                Your {brand.token.symbol} address
+              </span>
+              <Address value={session.safeAddr} />
+              <span
+                data-testid="safe-addr"
+                className="mono mt-2 block max-w-full break-all px-4 text-center text-xs text-ink-muted"
+              >
+                {session.safeAddr}
+              </span>
+            </div>
+          </div>
+        </Card>
 
-      <div className="mb-4 rounded-xl bg-white p-6 shadow-sm">
-        <div className="flex justify-center">
-          <canvas
-            data-testid="receive-qr"
-            ref={canvasRef}
-            className="rounded-lg"
+        <Card>
+          <Input
+            data-testid="amount-input"
+            label="Request a specific amount (optional)"
+            type="text"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            hint={
+              amount
+                ? `QR will pre-fill ${amount.replace(",", ".")} ${brand.token.symbol}`
+                : "Leave empty to let the sender choose."
+            }
+            className="nums"
           />
-        </div>
-        <div className="mt-4 text-center">
-          <code
-            data-testid="safe-addr"
-            className="break-all font-mono text-xs text-neutral-600"
-          >
-            {session.safeAddr}
-          </code>
-        </div>
+        </Card>
+
+        <p className="px-1 text-xs text-ink-soft">
+          Scan this QR in any EIP-681-aware wallet on {brand.chain.name}.
+        </p>
       </div>
-
-      <label className="mb-4 block">
-        <span className="text-sm text-neutral-500">
-          Amount (optional — embeds into QR)
-        </span>
-        <input
-          data-testid="amount-input"
-          type="text"
-          inputMode="decimal"
-          placeholder="0,00"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 tabular-nums focus:border-neutral-900 focus:outline-none"
-        />
-      </label>
-
-      <p className="text-sm text-neutral-500">
-        Scan the QR in any EIP-681-aware wallet to pre-fill recipient
-        {amount ? " and amount" : ""}. On {brand.chain.name}.
-      </p>
-    </div>
+    </Layout>
   );
 }

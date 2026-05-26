@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
+import { isAddress, parseUnits } from "viem";
 import { getSession } from "../lib/session.js";
 import { brand } from "../brand.config.js";
-import { isAddress, parseUnits } from "viem";
 import { sendEure } from "wasp/client/operations";
+import { Layout } from "../ui/Layout.js";
+import { Card } from "../ui/Card.js";
+import { Button } from "../ui/Button.js";
+import { Input } from "../ui/Input.js";
 
 type Status =
   | { kind: "idle" }
@@ -23,9 +27,10 @@ export function SendPage() {
     return null;
   }
 
-  const toValid = isAddress(toAddr);
+  const toValid = toAddr.length === 0 || isAddress(toAddr);
+  const toReady = isAddress(toAddr);
   const amountValid = /^\d+([.,]\d+)?$/.test(amount.trim());
-  const canSubmit = toValid && amountValid && status.kind !== "sending";
+  const canSubmit = toReady && amountValid && status.kind !== "sending";
 
   async function onSend() {
     if (!canSubmit) return;
@@ -48,87 +53,103 @@ export function SendPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md p-6">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          to="/wallet"
-          className="text-sm text-neutral-500 hover:text-neutral-800"
-        >
-          ← Wallet
-        </Link>
-        <h1 className="text-2xl font-semibold">Send {brand.token.symbol}</h1>
-      </div>
+    <Layout back={{ to: "/wallet", label: "Wallet" }} title="Send">
+      <div className="pt-1">
+        <Card>
+          <div className="space-y-4">
+            <Input
+              data-testid="to-input"
+              label="Recipient address"
+              type="text"
+              inputMode="text"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="0x…"
+              value={toAddr}
+              onChange={(e) => setToAddr(e.target.value.trim())}
+              mono
+              error={!toValid ? "Not a valid 0x address" : null}
+              hint={toReady ? "Looks good." : "Paste a 0x-prefixed Ethereum address."}
+            />
 
-      <div className="space-y-4">
-        <label className="block">
-          <span className="text-sm text-neutral-500">To address</span>
-          <input
-            data-testid="to-input"
-            type="text"
-            inputMode="text"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder="0x…"
-            value={toAddr}
-            onChange={(e) => setToAddr(e.target.value.trim())}
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 font-mono text-sm focus:border-neutral-900 focus:outline-none"
-          />
-          {toAddr.length > 0 && !toValid && (
-            <span className="mt-1 block text-xs text-red-600">
-              Not a valid 0x address
-            </span>
-          )}
-        </label>
+            <Input
+              data-testid="amount-input"
+              label={`Amount in ${brand.token.symbol}`}
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="nums"
+            />
 
-        <label className="block">
-          <span className="text-sm text-neutral-500">Amount</span>
-          <input
-            data-testid="amount-input"
-            type="text"
-            inputMode="decimal"
-            placeholder="0,00"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 tabular-nums focus:border-neutral-900 focus:outline-none"
-          />
-        </label>
-
-        <button
-          data-testid="send-button"
-          onClick={onSend}
-          disabled={!canSubmit}
-          className="w-full rounded-xl bg-neutral-900 px-4 py-3 text-white disabled:bg-neutral-300"
-        >
-          {status.kind === "sending" ? "Sending..." : `Send ${brand.token.symbol}`}
-        </button>
+            <Button
+              data-testid="send-button"
+              onClick={onSend}
+              disabled={!canSubmit}
+              loading={status.kind === "sending"}
+              size="lg"
+              fullWidth
+            >
+              {status.kind === "sending"
+                ? "Sending…"
+                : `Send ${brand.token.symbol}`}
+            </Button>
+          </div>
+        </Card>
 
         {status.kind === "sent" && (
-          <div
+          <Card
             data-testid="send-success"
-            className="rounded-xl bg-green-50 p-4 text-sm"
+            className="mt-4 bg-brand-50 ring-1 ring-brand/10"
           >
-            <div className="font-semibold text-green-700">Sent</div>
-            <a
-              href={`${brand.chain.explorerUrl}/tx/${status.txHash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="break-all font-mono text-xs underline"
-            >
-              {status.txHash}
-            </a>
-          </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-brand">
+                  Transaction submitted
+                </p>
+                <p className="mt-1 text-xs text-ink-muted">
+                  Track on the explorer once it's mined.
+                </p>
+                <a
+                  href={`${brand.chain.explorerUrl}/tx/${status.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mono mt-2 block truncate text-xs text-brand hover:underline"
+                >
+                  {status.txHash}
+                </a>
+              </div>
+            </div>
+          </Card>
         )}
 
         {status.kind === "error" && (
-          <div
+          <Card
             data-testid="send-error"
-            className="rounded-xl bg-red-50 p-4 text-sm text-red-700"
+            className="mt-4 bg-accent-50 ring-1 ring-accent/15"
           >
-            {status.message}
-          </div>
+            <p className="text-sm font-medium text-accent">{status.message}</p>
+          </Card>
         )}
       </div>
-    </div>
+    </Layout>
+  );
+}
+
+function CheckCircle() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0 text-brand" fill="none">
+      <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M6 10.5l2.5 2.5L14 7.5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

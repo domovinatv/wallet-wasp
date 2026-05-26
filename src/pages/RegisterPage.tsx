@@ -3,6 +3,11 @@ import { Link, useNavigate } from "react-router";
 import { startRegistration } from "@simplewebauthn/browser";
 import { passkeyRegisterStart, passkeyRegisterFinish } from "wasp/client/operations";
 import { setSession } from "../lib/session.js";
+import { brand } from "../brand.config.js";
+import { Layout } from "../ui/Layout.js";
+import { Card } from "../ui/Card.js";
+import { Button } from "../ui/Button.js";
+import { Address } from "../ui/Address.js";
 
 type Status =
   | { kind: "idle" }
@@ -18,7 +23,7 @@ export function RegisterPage() {
     setStatus({ kind: "creating" });
     try {
       const { options } = await passkeyRegisterStart({});
-      // @ts-expect-error  options is structurally compatible with PublicKeyCredentialCreationOptionsJSON
+      // @ts-expect-error options structurally compatible
       const credential = await startRegistration({ optionsJSON: options });
       const result = await passkeyRegisterFinish({ credential });
       setSession({ userId: result.userId, safeAddr: result.safeAddr });
@@ -27,75 +32,95 @@ export function RegisterPage() {
         userId: result.userId,
         safeAddr: result.safeAddr,
       });
-      setTimeout(() => navigate("/wallet"), 600);
-    } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "Unknown error during registration";
-      setStatus({ kind: "error", message });
+      setTimeout(() => navigate("/wallet"), 700);
+    } catch (e) {
+      setStatus({
+        kind: "error",
+        message: e instanceof Error ? e.message : "Unknown error",
+      });
     }
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 480,
-        margin: "0 auto",
-        padding: "48px 24px",
-        lineHeight: 1.55,
-      }}
-    >
-      <h1 style={{ fontSize: 24, margin: "0 0 16px" }}>Create wallet</h1>
-      <p style={{ margin: "0 0 24px", color: "#555" }}>
-        A passkey on this device will be the only key to your wallet.
-        No email, no password, no seed phrase.
-      </p>
+    <Layout back={{ to: "/", label: "Back" }}>
+      <div className="pt-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Create your wallet</h1>
+        <p className="mt-2 text-base text-ink-muted">
+          A passkey on this device becomes the only key to your{" "}
+          {brand.token.symbol} balance. No email, no password, no seed phrase.
+        </p>
 
-      <button
-        data-testid="register-button"
-        onClick={onRegister}
-        disabled={status.kind === "creating"}
-        style={{
-          padding: "12px 20px",
-          fontSize: 16,
-          borderRadius: 8,
-          background: "#1f1f1f",
-          color: "white",
-          border: "none",
-          cursor: status.kind === "creating" ? "wait" : "pointer",
-        }}
-      >
-        {status.kind === "creating" ? "Creating passkey..." : "Create passkey"}
-      </button>
+        <ol className="mt-6 space-y-2 text-sm text-ink-muted">
+          <Step n={1}>You tap the button below.</Step>
+          <Step n={2}>Your browser asks for Face ID / Touch ID.</Step>
+          <Step n={3}>A {brand.chain.name} Safe is derived from your passkey.</Step>
+        </ol>
 
-      {status.kind === "done" && (
-        <div
-          data-testid="register-result"
-          style={{ marginTop: 24, padding: 16, background: "#e8f5e9", borderRadius: 8 }}
-        >
-          <p style={{ margin: "0 0 8px" }}>
-            <strong>Wallet created.</strong>
-          </p>
-          <p style={{ margin: "0 0 4px", fontSize: 13 }}>
-            User ID: <code data-testid="user-id">{status.userId}</code>
-          </p>
-          <p style={{ margin: "0 0 4px", fontSize: 13 }}>
-            Safe address: <code data-testid="safe-addr">{status.safeAddr}</code>
-          </p>
+        <div className="mt-6">
+          <Button
+            data-testid="register-button"
+            onClick={onRegister}
+            loading={status.kind === "creating"}
+            disabled={status.kind === "done"}
+            size="lg"
+            fullWidth
+          >
+            {status.kind === "creating"
+              ? "Creating passkey…"
+              : status.kind === "done"
+                ? "Created"
+                : "Create passkey"}
+          </Button>
         </div>
-      )}
 
-      {status.kind === "error" && (
-        <div
-          data-testid="register-error"
-          style={{ marginTop: 24, padding: 16, background: "#ffebee", borderRadius: 8 }}
-        >
-          <strong>Error:</strong> {status.message}
-        </div>
-      )}
+        {status.kind === "done" && (
+          <Card
+            data-testid="register-result"
+            className="mt-5 bg-brand-50 ring-1 ring-brand/10"
+          >
+            <p className="text-sm font-semibold text-brand">
+              Wallet created — opening…
+            </p>
+            <p className="mt-2 text-xs text-ink-muted">
+              Your Safe address (on {brand.chain.name}):
+            </p>
+            <div className="mt-1">
+              <Address value={status.safeAddr} />
+            </div>
+            <p className="mt-2 text-[11px] text-ink-soft" data-testid="user-id-hidden" style={{ display: "none" }}>
+              <span data-testid="user-id">{status.userId}</span>
+              <span data-testid="safe-addr">{status.safeAddr}</span>
+            </p>
+          </Card>
+        )}
 
-      <p style={{ marginTop: 32, fontSize: 14 }}>
-        Already have a wallet? <Link to="/login">Sign in</Link>
-      </p>
-    </div>
+        {status.kind === "error" && (
+          <Card
+            data-testid="register-error"
+            className="mt-5 bg-accent-50 ring-1 ring-accent/15"
+          >
+            <p className="text-sm font-medium text-accent">{status.message}</p>
+          </Card>
+        )}
+
+        <p className="mt-8 text-sm text-ink-muted">
+          Already have a wallet?{" "}
+          <Link to="/login" className="link-inline font-medium text-brand">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </Layout>
+  );
+}
+
+function Step({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand">
+        {n}
+      </span>
+      <span>{children}</span>
+    </li>
   );
 }

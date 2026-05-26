@@ -36,7 +36,9 @@ test("passkey register creates User + Passkey + returns Safe addr", async ({
   await attachVirtualAuthenticator(page);
 
   await page.goto("/register");
-  await expect(page.getByRole("heading", { name: /create wallet/i })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /create your wallet/i }),
+  ).toBeVisible();
 
   await page.getByTestId("register-button").click();
 
