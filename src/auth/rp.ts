@@ -10,4 +10,4 @@ export const RP_ID = process.env.WASP_WEB_RP_ID ?? "localhost";
 export const RP_NAME = process.env.WASP_WEB_RP_NAME ?? "wallet-wasp";
 
 export const RP_ORIGIN =
-  process.env.WASP_WEB_CLIENT_URL ?? (isDev ? "http://localhost:4000" : "");
+  process.env.WASP_WEB_CLIENT_URL ?? (isDev ? "http://localhost:3000" : "");

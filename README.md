@@ -79,9 +79,9 @@ wasp db migrate-dev    # apply Prisma migrations
 wasp start             # client on :4000, server on :4001
 ```
 
-Ports default to 4000/4001 to avoid Docker port-3000 collision common on
-dev machines. Override via `.env.server` (`PORT`) and `.env.client`
-(`REACT_APP_API_URL`).
+Defaults are WASP's 3000 (client) + 3001 (server). If those ports are
+taken on your machine, uncomment `PORT` + `WASP_WEB_CLIENT_URL` in
+`.env.server` and `REACT_APP_API_URL` in `.env.client`.
 
 ## Run tests
 
