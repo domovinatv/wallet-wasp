@@ -1,66 +1,58 @@
-// Brand-as-data per ADR 0010. The only file in src/ allowed to contain
-// brand-specific strings, colors, contract addresses, or copy. Everything
-// else MUST consume from this config. Goal: `grep -ri "domovina" src/ |
-// grep -v brand.config.ts | grep -v copyright` returns empty.
+// Brand-as-data per ADR 0010. Single re-export point for the active
+// tenant config. Switch tenants by setting VITE_BRAND in the build env:
 //
-// To re-skin for a different brand or chain, edit this file (or load
-// from env). No other source file should need touching.
+//   VITE_BRAND=default    npm run build  →  DOMOVINA Wallet
+//   VITE_BRAND=sportklub  npm run build  →  SK Wallet
+//   VITE_BRAND=zupa       npm run build  →  Župa Wallet
+//
+// No other src/ file should hard-code brand strings, colors, contracts,
+// or chain config — everything goes through `brand` exported here.
+// To add a new tenant: drop a new file under src/brands/ and register
+// it in REGISTRY below.
 
-export const brand = {
-  // Identity
-  name: "DOMOVINA",
-  productName: "wallet",
-  tagline: "Self-custody EURe wallet powered by passkeys",
-  homepageUrl: "https://domovina.ai",
-  sourceRepoUrl: "https://github.com/domovinatv/wallet-wasp",
-  parentRepoUrl: "https://github.com/domovinatv/pay.domovina.ai",
-  adrPath: "/blob/main/docs/decisions/0010-open-wallet-vision.md",
+import type { BrandConfig } from "./brands/types.js";
+import { brand as defaultBrand } from "./brands/default.js";
+import { brand as sportklubBrand } from "./brands/sportklub.js";
+import { brand as zupaBrand } from "./brands/zupa.js";
 
-  // Visual identity
-  primaryColor: "#002F6C", // DOMOVINA navy
-  accentColor: "#FF0000", // Croatian tricolor red
-  bgColor: "#fafafa",
-  textColor: "#1f1f1f",
+const REGISTRY: Record<string, BrandConfig> = {
+  default: defaultBrand,
+  sportklub: sportklubBrand,
+  zupa: zupaBrand,
+};
 
-  // Chain configuration — switchable by template consumers
-  chain: {
-    id: 100,
-    name: "Gnosis Chain",
-    rpcUrl: "https://rpc.gnosischain.com",
-    explorerUrl: "https://gnosisscan.io",
-    nativeCurrency: { symbol: "xDAI", decimals: 18 },
-    multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11" as `0x${string}`,
-  } as const,
+function resolveActiveBrand(): BrandConfig {
+  // Vite injects build-time env on both client and server when prefixed
+  // with VITE_. On server-side WASP actions, fall back to process.env so
+  // CREATE2 derivation in passkeyRegisterFinish uses the right chain.
+  const fromVite =
+    typeof import.meta !== "undefined" &&
+    (import.meta as { env?: { VITE_BRAND?: string } }).env?.VITE_BRAND;
+  const fromProcess =
+    typeof process !== "undefined" && process.env?.VITE_BRAND;
+  const id = fromVite || fromProcess || "default";
+  return REGISTRY[id] ?? defaultBrand;
+}
 
-  // Safe v1.4.1 + WebAuthn passkey-signer infrastructure. Chain-specific
-  // contracts (these addresses are for Gnosis Chain; same Safe versions
-  // are deployed at deterministic addresses on most EVM chains).
-  contracts: {
-    safeWebAuthnSignerFactory:
-      "0x1d31F259eE307358a26dFb23EB365939E8641195" as `0x${string}`,
-    safeWebAuthnSharedSigner:
-      "0x94a4F6affBd8975951142c3999aEAB7ecee555c2" as `0x${string}`,
-    daimoP256Verifier:
-      "0xc2b78104907F722DABAc4C69f826a522B2754De4" as `0x${string}`,
-    p256Precompile:
-      "0x0000000000000000000000000000000000000100" as `0x${string}`,
-  } as const,
+export const brand: BrandConfig = resolveActiveBrand();
+export type { BrandConfig };
 
-  // Token to bias the UI around (the user's primary "balance")
-  token: {
-    address: "0xcB444e90D8198415266c6a2724b7900fb12FC56E" as `0x${string}`,
-    symbol: "EURe",
-    name: "Monerium EURe",
-    decimals: 18,
-  } as const,
+/**
+ * Returns the list of brands available for cross-TLD peer linking
+ * (per ADR 0008). For the open-wallet template we surface all
+ * registered tenants OTHER than the currently-active one — those are
+ * the peers a user could authorize a wallet on from this tenant.
+ */
+export function getLinkTargets(): BrandConfig[] {
+  return Object.values(REGISTRY).filter((b) => b.id !== brand.id);
+}
 
-  // Receive-side recipient routing: where payment intents land. For the
-  // DOMOVINA tenant, the production wallet uses pay.domovina.ai which
-  // routes via Zodiac Roles. For this experiment we just embed the
-  // user's own Safe address directly into receive QR codes.
-  payment: {
-    eip681Scheme: "ethereum",
-  } as const,
-} as const;
-
-export type Brand = typeof brand;
+/**
+ * Convenience check for feature flags from brand.enabledFeatures.
+ * Lets routes hide UI when the active brand has opted out of a feature.
+ */
+export function isFeatureEnabled(
+  feature: BrandConfig["enabledFeatures"][number],
+): boolean {
+  return brand.enabledFeatures.includes(feature);
+}

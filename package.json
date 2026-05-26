@@ -5,7 +5,19 @@
     ".wasp/out/*",
     ".wasp/out/sdk/wasp"
   ],
+  "scripts": {
+    "dev": "wasp start",
+    "test": "playwright test",
+    "build:default": "VITE_BRAND=default wasp build",
+    "build:sportklub": "VITE_BRAND=sportklub wasp build",
+    "build:zupa": "VITE_BRAND=zupa wasp build",
+    "ship:default": "VITE_BRAND=default wasp deploy fly deploy",
+    "ship:sportklub": "VITE_BRAND=sportklub wasp deploy fly deploy",
+    "ship:zupa": "VITE_BRAND=zupa wasp deploy fly deploy"
+  },
   "dependencies": {
+    "@safe-global/protocol-kit": "^7.1.0",
+    "@safe-global/safe-passkey": "^0.2.0",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.0",
     "@types/jsonwebtoken": "^9.0.10",
