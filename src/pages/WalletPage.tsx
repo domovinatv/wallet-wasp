@@ -21,14 +21,19 @@ function splitAmount(formatted: string): { whole: string; fraction: string } {
 }
 
 export function WalletPage() {
-  const session = getSession();
   const navigate = useNavigate();
   const [balance, setBalance] = useState<BalanceState>({ kind: "loading" });
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
 
+  // Read session ONCE per render but stabilize on primitive key (safeAddr)
+  // for useEffect dependency — getSession returns a fresh object each call,
+  // which would re-run the effect every render and infinite-loop fetches.
+  const session = getSession();
+  const safeAddr = session?.safeAddr ?? null;
+
   useEffect(() => {
-    if (!session) {
+    if (!safeAddr) {
       navigate("/login");
       return;
     }
@@ -36,7 +41,7 @@ export function WalletPage() {
 
     void (async () => {
       try {
-        const result = await getTokenBalance(session.safeAddr as AddrType);
+        const result = await getTokenBalance(safeAddr as AddrType);
         if (!cancelled) {
           setBalance({ kind: "ready", ...splitAmount(result.formatted) });
         }
@@ -56,7 +61,7 @@ export function WalletPage() {
     const activityTimer = setTimeout(() => {
       void (async () => {
         try {
-          const items = await fetchActivity(session.safeAddr as AddrType, 5);
+          const items = await fetchActivity(safeAddr as AddrType, 5);
           if (!cancelled) setActivity(items);
         } catch {
           /* silent on home — activity page surfaces errors */
@@ -70,7 +75,7 @@ export function WalletPage() {
       cancelled = true;
       clearTimeout(activityTimer);
     };
-  }, [session, navigate]);
+  }, [safeAddr, navigate]);
 
   if (!session) return null;
 
