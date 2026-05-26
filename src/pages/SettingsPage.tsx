@@ -50,6 +50,12 @@ export function SettingsPage() {
               label="Dodaj passkey"
               hint="Drugi uređaj kao co-owner istog Safe-a"
             />
+            <hr className="my-1 border-border" />
+            <Action
+              onClick={() => navigate("/settings/phone")}
+              label="Poveži telefon"
+              hint="Recovery + sybil-resistance preko otp.domovina.ai"
+            />
           </Card>
         </Section>
 

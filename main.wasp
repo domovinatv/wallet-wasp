@@ -57,6 +57,26 @@ page ExpandAccessPage {
   component: import { ExpandAccessPage } from "@src/pages/ExpandAccessPage"
 }
 
+route BindPhoneRoute { path: "/settings/phone", to: BindPhonePage }
+page BindPhonePage {
+  component: import { BindPhonePage } from "@src/pages/BindPhonePage"
+}
+
+route LinkRoute { path: "/link", to: LinkPage }
+page LinkPage {
+  component: import { LinkPage } from "@src/pages/LinkPage"
+}
+
+route LinkCallbackRoute { path: "/link-callback", to: LinkCallbackPage }
+page LinkCallbackPage {
+  component: import { LinkCallbackPage } from "@src/pages/LinkCallbackPage"
+}
+
+route EmbedRoute { path: "/embed", to: EmbedPage }
+page EmbedPage {
+  component: import { EmbedPage } from "@src/pages/EmbedPage"
+}
+
 // #region Wallet operations
 action sendEure {
   fn: import { sendEure } from "@src/relay/relay"

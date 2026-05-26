@@ -58,6 +58,20 @@ test("capture screenshots of each route", async ({ page }) => {
   await page.goto("/settings/expand-access");
   await page.screenshot({ path: "screenshots/expand-access.png", fullPage: true });
 
+  // BindPhone
+  await page.goto("/settings/phone");
+  await page.screenshot({ path: "screenshots/bind-phone.png", fullPage: true });
+
+  // Link page (no params → invalid request)
+  await page.goto(
+    "/link?newSigner=0x1234567890123456789012345678901234567890&newCredentialId=0xabc&newPubKeyX=1&newPubKeyY=2&newRpId=example.com&returnMode=postMessage&tenantName=Example",
+  );
+  await page.screenshot({ path: "screenshots/link.png", fullPage: true });
+
+  // Embed (no postMessage — waiting state)
+  await page.goto("/embed");
+  await page.screenshot({ path: "screenshots/embed.png", fullPage: true });
+
   // Login (logged out flow)
   await page.evaluate(() => localStorage.clear());
   await page.goto("/login");
