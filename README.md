@@ -19,23 +19,55 @@ rewrite of the production [wallet.domovina.ai](https://wallet.domovina.ai)
 > src/, sve preko brand config-a; generic naming komponenti; pluggable
 > attestation providers; configurable chain.**
 
-## What's shipped (MVP)
+## What's shipped (production parity scope)
 
-Passkey-only self-custody wallet, brand-as-data, runs end-to-end against
-live Gnosis Chain RPC. All 5 MVP features working with E2E tests passing
-(5/5 in 4.7s):
+Passkey-only self-custody wallet on Gnosis Chain, ported 1:1 from the
+production `wallet/` source. 13 routes, real Safe v1.4.1 CREATE2
+derivation, full ERC-1271 signature encoding, brand-as-data white-label
+with 3 sample tenants. 5/5 main E2E tests passing.
 
-| Route | Component | What it does |
+| Route | What it does | Status |
 |---|---|---|
-| `/` | `HomePage` | Landing with open-wallet North Star + CTA buttons |
-| `/register` | `RegisterPage` | Create passkey → server verifies → derives stub Safe addr → persists User + Passkey rows |
-| `/login` | `LoginPage` | Use existing passkey → server verifies assertion → returns Safe addr + session |
-| `/wallet` | `WalletPage` | EURe balance via viem from Gnosis RPC + Safe address + explorer link |
-| `/send` | `SendPage` | Address + amount form → `sendEure` action (currently stub; real relayer broadcast in next phase) |
-| `/receive` | `ReceivePage` | EIP-681 QR for ERC-20 transfer, live regen on amount change |
+| `/` | Landing with open-wallet North Star + CTA buttons | ✅ |
+| `/register` | Create passkey → real Safe v1.4.1 derivation → DB row | ✅ |
+| `/login` | Sign-in via WebAuthn assertion → session token | ✅ |
+| `/wallet` | EURe balance + activity feed preview + Send/Receive grid | ✅ |
+| `/send` | Address+amount form, recipient chips, deep-link prefill | ✅ stub relay |
+| `/receive` | EIP-681 QR (live regen on amount change) | ✅ |
+| `/activity` | Full tx history, infinite scroll, day-grouped (Danas/Jučer) | ✅ |
+| `/settings` | Account info, security actions, theme picker, signout | ✅ |
+| `/settings/expand-access` | Multi-passkey same-Safe per ADR 0008 | 🟡 needs relayer |
+| `/settings/phone` | OTP binding via otp.domovina.ai live | 🟡 needs registry proxy |
+| `/link` | Cross-TLD authorize page per ADR 0008 | 🟡 needs relayer |
+| `/link-callback` | Safari redirect-path finalize | ✅ |
+| `/embed` | Iframe SDK target per ADR 0009 | 🟡 needs relayer |
+
+🟡 = UI fully ported with honest "needs RELAYER_PRIVATE_KEY env" banners.
+On-chain broadcast unlocks when `.env.server` has a funded EOA private
+key. No code changes needed there.
 
 ![home](./screenshots/home.png) ![wallet](./screenshots/wallet.png)
+![activity](./screenshots/activity.png) ![settings](./screenshots/settings.png)
 ![send](./screenshots/send-filled.png) ![receive](./screenshots/receive.png)
+![expand-access](./screenshots/expand-access.png) ![bind-phone](./screenshots/bind-phone.png)
+![link](./screenshots/link.png) ![embed](./screenshots/embed.png)
+
+## White-label per-tenant builds (ADR 0007 + 0010)
+
+3 sample tenant configs in `src/brands/`:
+
+```bash
+npm run build:default      # DOMOVINA Wallet (navy + red)
+npm run build:sportklub    # SK Wallet (SofaScore blue)
+npm run build:zupa         # Župa Wallet (Vatican gold)
+```
+
+Selection is build-time via `VITE_BRAND` env, consumed in
+`src/brand.config.ts`. To add a new tenant: drop a new file under
+`src/brands/`, register in the resolver, add ship script.
+
+Brand audit: `grep -ri "domovina\|DOMOVINA" src/` returns matches ONLY
+inside `src/brands/default.ts` (the tenant config itself).
 
 ## Architecture (high-level)
 
