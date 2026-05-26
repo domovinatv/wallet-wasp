@@ -17,8 +17,10 @@ import { Card } from "../ui/Card.js";
 import { Address as AddressChip } from "../ui/Address.js";
 
 export function ActivityPage() {
-  const session = getSession();
   const navigate = useNavigate();
+  const session = getSession();
+  const safeAddr = session?.safeAddr ?? null;
+
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [cursorBlock, setCursorBlock] = useState<bigint | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,14 +28,28 @@ export function ActivityPage() {
   const [error, setError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!session) navigate("/login");
-  }, [session, navigate]);
+  // Refs used by the IntersectionObserver effect so we don't re-create the
+  // observer (and re-trigger fetches) every time loading/done/cursorBlock
+  // change. The observer reads the current values via refs at call-time.
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+  const doneRef = useRef(done);
+  doneRef.current = done;
+  const cursorRef = useRef(cursorBlock);
+  cursorRef.current = cursorBlock;
+  const safeAddrRef = useRef(safeAddr);
+  safeAddrRef.current = safeAddr;
 
-  // Initial page
+  // Auth redirect — primitive dep only.
   useEffect(() => {
-    if (!session) return;
+    if (!safeAddr) navigate("/login");
+  }, [safeAddr, navigate]);
+
+  // Initial fetch — runs ONCE per safeAddr. Aborts cleanly on unmount.
+  useEffect(() => {
+    if (!safeAddr) return;
     let cancelled = false;
+
     void (async () => {
       try {
         const latest = await publicClient.getBlockNumber();
@@ -42,7 +58,7 @@ export function ActivityPage() {
             ? latest - ACTIVITY_PAGE_BLOCK_RANGE
             : 0n;
         const page = await fetchActivityRange(
-          session.safeAddr as Address,
+          safeAddr as Address,
           from,
           latest,
         );
@@ -52,38 +68,42 @@ export function ActivityPage() {
         if (from === 0n) setDone(true);
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Greška");
+          setError(e instanceof Error ? e.message : "RPC error");
+          setDone(true); // stop attempting on error to avoid retry loop
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [safeAddr]);
 
-  // Infinite scroll
+  // IntersectionObserver — created once, reads via refs. No setState in
+  // observer creation deps means no re-mount loop.
   useEffect(() => {
-    if (done || loading || cursorBlock === null) return;
     const node = sentinelRef.current;
     if (!node) return;
 
+    let busy = false;
     const observer = new IntersectionObserver(
       async (entries) => {
         if (!entries[0].isIntersecting) return;
-        if (!session || cursorBlock === null) return;
+        if (busy || doneRef.current || loadingRef.current) return;
+        const cursor = cursorRef.current;
+        const addr = safeAddrRef.current;
+        if (cursor === null || !addr) return;
+
+        busy = true;
         setLoading(true);
         try {
           const from =
-            cursorBlock > ACTIVITY_PAGE_BLOCK_RANGE
-              ? cursorBlock - ACTIVITY_PAGE_BLOCK_RANGE
+            cursor > ACTIVITY_PAGE_BLOCK_RANGE
+              ? cursor - ACTIVITY_PAGE_BLOCK_RANGE
               : 0n;
-          const page = await fetchActivityRange(
-            session.safeAddr as Address,
-            from,
-            cursorBlock,
-          );
+          const page = await fetchActivityRange(addr as Address, from, cursor);
           setItems((prev) => [...prev, ...page]);
           if (from === 0n) {
             setDone(true);
@@ -92,16 +112,18 @@ export function ActivityPage() {
             setCursorBlock(from - 1n);
           }
         } catch (e) {
-          setError(e instanceof Error ? e.message : "Greška");
+          setError(e instanceof Error ? e.message : "RPC error");
+          setDone(true);
         } finally {
           setLoading(false);
+          busy = false;
         }
       },
       { rootMargin: "300px" },
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [cursorBlock, done, loading, session]);
+  }, []); // Observer set up once — no deps that change per render.
 
   const grouped = useMemo(() => {
     const map = new Map<string, ActivityItem[]>();
@@ -114,12 +136,12 @@ export function ActivityPage() {
     return Array.from(map.entries());
   }, [items]);
 
-  if (!session) return null;
+  if (!safeAddr) return null;
 
   return (
     <Layout back={{ to: "/wallet", label: "Wallet" }} title="Aktivnost">
       <div className="space-y-4 pt-1">
-        {!loading && items.length === 0 && (
+        {!loading && items.length === 0 && !error && (
           <Card>
             <p className="text-sm text-ink-muted">
               Još nema transakcija na ovom Safe-u.
@@ -146,16 +168,24 @@ export function ActivityPage() {
 
         {error && (
           <Card className="bg-accent-50 ring-1 ring-accent/15">
-            <p className="text-sm text-accent">{error}</p>
+            <p className="text-sm font-medium text-accent">
+              Greška pri dohvatu aktivnosti
+            </p>
+            <p className="mt-1 text-xs text-ink-muted break-words">{error}</p>
+            <p className="mt-2 text-xs text-ink-soft">
+              Probaj refresh — Gnosis public RPC ponekad rate-limita-a.
+            </p>
           </Card>
         )}
 
-        {!done && <div ref={sentinelRef} className="h-6" data-testid="activity-sentinel" />}
+        {!done && !error && (
+          <div ref={sentinelRef} className="h-6" data-testid="activity-sentinel" />
+        )}
 
-        {loading && (
+        {loading && !error && (
           <p className="px-1 py-2 text-center text-xs text-ink-soft">učitavam…</p>
         )}
-        {done && items.length > 0 && (
+        {done && !error && items.length > 0 && (
           <p className="px-1 py-4 text-center text-xs text-ink-soft">
             To je sve. Začetak.
           </p>
