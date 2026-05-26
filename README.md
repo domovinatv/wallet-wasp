@@ -4,6 +4,21 @@
 rewrite of the production [wallet.domovina.ai](https://wallet.domovina.ai)
 (passkey-owned Safe self-custody wallet on Gnosis).
 
+> **North Star — open-wallet**
+>
+> Ovaj repo je **incubation seed** za potencijalni `open-wallet` template
+> po uzoru na [wasp-lang/open-saas](https://github.com/wasp-lang/open-saas):
+> oficijelni WASP-blessed open-source šablon, ali za self-custody Web3
+> wallet umjesto za SaaS. Po uspješnoj incubation fazi rename → release
+> pod `domovinatv/open-wallet` (i potencijalno pod `wasp-lang/open-wallet`
+> uz WASP team blessing).
+>
+> Strategijska odluka i kriteriji za rename dokumentirani u
+> [ADR 0010](https://github.com/domovinatv/pay.domovina.ai/blob/main/docs/decisions/0010-open-wallet-vision.md).
+> Praktične posljedice za code: **bez `domovina`/`DOMOVINA` hard-codeova u
+> src/, sve preko brand config-a; generic naming komponenti; pluggable
+> attestation providers; configurable chain.**
+
 ## What this repo is
 
 A side-by-side experiment: take a production-validated React+CF-Workers
@@ -13,7 +28,9 @@ tokens for the same app" claim on a real-world dApp use case, and contribute
 findings back to the WASP community (founders: Matija & Martin Šošić).
 
 The production wallet at [wallet.domovina.ai](https://wallet.domovina.ai)
-stays untouched — this is parallel R&D, not a migration.
+stays untouched — this is parallel R&D, not a migration. Ako se rewrite
+incubation pokaže uspješnim (vidi ADR 0010), genericizacija + rename u
+open-wallet je sljedeća iteracija.
 
 ## Layout
 
