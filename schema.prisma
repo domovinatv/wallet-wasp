@@ -7,36 +7,27 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Use Prisma Schema file to define your entities: https://www.prisma.io/docs/concepts/components/prisma-schema.
-// Run `wasp db migrate-dev` in the CLI to create the database tables,
-// then run `wasp db studio` to open Prisma Studio and view your db models.
+// Generic naming per ADR 0010 — no domovina-specific entity names.
+// `User` owns one or more `Passkey` credentials; each `Passkey` binds
+// to a single Safe smart-contract wallet address on the configured chain
+// (see brand.config.ts coming in Phase 2).
+//
+// Phase 1 (auth) populates User + Passkey.
+// Phase 2 (wallet) adds Wallet, PaymentIntent, PeerLink models.
+
 model User {
-  id       String @id @default(uuid())
-  username String
-
-  tasks Task[]
-  tags  Tag[]
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  passkeys  Passkey[]
 }
 
-model Task {
-  id          String   @id @default(uuid())
-  description String
-  isDone      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+model Passkey {
+  id           String   @id @default(uuid())
+  credentialId String   @unique
+  pubkey       String
+  safeAddr     String
+  createdAt    DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id])
   userId String
-
-  tags Tag[]
-}
-
-model Tag {
-  id    String @id @default(uuid())
-  name  String @unique
-  color String
-
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
-
-  tasks Task[]
 }

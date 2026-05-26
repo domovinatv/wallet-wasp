@@ -1,11 +1,18 @@
 import { Outlet } from "react-router";
-import "./App.css";
-import { Header } from "./shared/components/Header";
 
 export function App() {
   return (
-    <main className="flex min-h-screen w-full flex-col bg-neutral-50 text-neutral-800">
-      <Header />
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        background: "#fafafa",
+        color: "#1f1f1f",
+      }}
+    >
       <Outlet />
     </main>
   );
