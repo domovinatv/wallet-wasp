@@ -33,12 +33,14 @@ export function BindPhonePage() {
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
   const cancelRef = useRef<(() => void) | null>(null);
 
+  const safeAddr = session?.safeAddr ?? null;
+
   useEffect(() => {
-    if (!session) navigate("/login");
+    if (!safeAddr) navigate("/login");
     return () => {
       cancelRef.current?.();
     };
-  }, [session, navigate]);
+  }, [safeAddr, navigate]);
 
   async function onStart() {
     setStage({ kind: "starting" });

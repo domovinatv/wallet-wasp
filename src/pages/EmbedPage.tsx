@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSession } from "../lib/session.js";
 import { brand } from "../brand.config.js";
 import { parseUnits } from "viem";
@@ -39,6 +39,8 @@ export function EmbedPage() {
     session ? { kind: "waiting" } : { kind: "no-wallet" },
   );
   const [parentOrigin, setParentOrigin] = useState<string | null>(null);
+  const parentOriginRef = useRef<string | null>(null);
+  parentOriginRef.current = parentOrigin;
 
   useEffect(() => {
     function onMessage(e: MessageEvent) {
@@ -48,8 +50,11 @@ export function EmbedPage() {
       if (typeof cmd.requestId !== "number") return;
 
       const origin = e.origin;
-      if (!parentOrigin) setParentOrigin(origin);
-      const safeAddr = session?.safeAddr;
+      if (!parentOriginRef.current) setParentOrigin(origin);
+      // Read fresh session inside handler — not via closure — so the
+      // listener stays valid across renders without re-mount.
+      const sess = getSession();
+      const safeAddr = sess?.safeAddr;
 
       if (cmd.type === "connect") {
         if (!safeAddr) {
@@ -111,7 +116,11 @@ export function EmbedPage() {
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [session, parentOrigin]);
+    // Read session via getSession() inside the listener (not as dep) so the
+    // listener doesn't re-mount on every render. parentOrigin is captured
+    // via setState — read fresh inside handler instead of dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (stage.kind === "no-wallet") {
     return (

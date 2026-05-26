@@ -18,20 +18,21 @@ function buildEip681(safeAddr: string, amountStr: string): string {
 }
 
 export function ReceivePage() {
-  const session = getSession();
   const navigate = useNavigate();
+  const session = getSession();
+  const safeAddr = session?.safeAddr ?? null;
   const [amount, setAmount] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (!session) {
+    if (!safeAddr) {
       navigate("/login");
     }
-  }, [session, navigate]);
+  }, [safeAddr, navigate]);
 
   useEffect(() => {
-    if (!session || !canvasRef.current) return;
-    const uri = buildEip681(session.safeAddr, amount);
+    if (!safeAddr || !canvasRef.current) return;
+    const uri = buildEip681(safeAddr, amount);
     void QRCode.toCanvas(canvasRef.current, uri, {
       width: 280,
       margin: 1,
@@ -41,9 +42,9 @@ export function ReceivePage() {
         light: "#ffffff",
       },
     });
-  }, [session, amount]);
+  }, [safeAddr, amount]);
 
-  if (!session) return null;
+  if (!safeAddr || !session) return null;
 
   return (
     <Layout back={{ to: "/wallet", label: "Wallet" }} title="Receive">
