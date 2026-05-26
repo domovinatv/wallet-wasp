@@ -13,6 +13,8 @@ export const brand = {
   tagline: "Self-custody EURe wallet powered by passkeys",
   homepageUrl: "https://domovina.ai",
   sourceRepoUrl: "https://github.com/domovinatv/wallet-wasp",
+  parentRepoUrl: "https://github.com/domovinatv/pay.domovina.ai",
+  adrPath: "/blob/main/docs/decisions/0010-open-wallet-vision.md",
 
   // Visual identity
   primaryColor: "#002F6C", // DOMOVINA navy
